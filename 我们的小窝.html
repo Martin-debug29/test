@@ -10,7 +10,7 @@
   
   .header { background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.08); padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; }
   .header-title { font-size: 20px; font-weight: 600; color: #e91e63; }
-  .sync-status { font-size: 12px; padding: 4px 10px; border-radius: 12px; }
+  .sync-status { font-size: 12px; padding: 4px 10px; border-radius: 12px; transition: all 0.3s; }
   
   .nav { background: #fff; padding: 10px 20px; display: flex; gap: 6px; overflow-x: auto; }
   .nav-btn { padding: 8px 16px; border-radius: 20px; border: none; background: #f5f5f5; color: #666; font-size: 14px; cursor: pointer; white-space: nowrap; }
@@ -120,6 +120,25 @@
   .img-preview-item { position: relative; width: 60px; height: 60px; }
   .img-preview-item img { width: 100%; height: 100%; object-fit: cover; border-radius: 8px; }
   .img-preview-item .del { position: absolute; top: -6px; right: -6px; width: 20px; height: 20px; border-radius: 50%; background: #e91e63; color: #fff; border: none; font-size: 12px; cursor: pointer; }
+  
+  /* 评论样式 */
+  .comments-section { margin-top: 20px; border-top: 1px solid #f0f0f0; padding-top: 16px; }
+  .comments-title { font-size: 14px; font-weight: 600; color: #333; margin-bottom: 12px; display: flex; align-items: center; gap: 6px; }
+  .comments-count { background: #e91e63; color: #fff; font-size: 12px; padding: 2px 8px; border-radius: 10px; }
+  .comment-item { background: #fafafa; border-radius: 12px; padding: 12px; margin-bottom: 10px; }
+  .comment-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+  .comment-author { font-size: 13px; font-weight: 600; color: #e91e63; }
+  .comment-time { font-size: 11px; color: #999; }
+  .comment-content { font-size: 14px; color: #444; line-height: 1.6; white-space: pre-wrap; }
+  .comment-actions { margin-top: 8px; display: flex; gap: 12px; }
+  .comment-action-btn { font-size: 12px; color: #999; cursor: pointer; background: none; border: none; padding: 0; }
+  .comment-action-btn:hover { color: #e91e63; }
+  .comment-reply { margin-left: 20px; margin-top: 10px; padding-left: 12px; border-left: 2px solid #fce4ec; }
+  .reply-form { margin-top: 10px; }
+  .reply-input { width: 100%; padding: 10px; border: 1px solid #eee; border-radius: 10px; font-size: 14px; background: #fff; }
+  .reply-input:focus { border-color: #e91e63; outline: none; }
+  .reply-submit { margin-top: 8px; display: flex; justify-content: flex-end; gap: 8px; }
+  .diary-actions-bar { display: flex; gap: 10px; margin-top: 20px; padding-top: 16px; border-top: 1px solid #f0f0f0; }
 </style>
 </head>
 <body>
@@ -204,13 +223,21 @@
     </div>
     
     <div class="setting-section">
-      <div class="setting-title">☁️ 云端同步</div>
+      <div class="setting-title">☁️ 云端同步（阿里云OSS）</div>
       <div class="cloud-toggle">
         <div class="toggle on" id="auto-sync-btn" onclick="toggleAutoSync()"></div>
         <div><div style="font-size:14px;color:#333;">自动同步</div><div style="font-size:12px;color:#999;">保存时自动同步到云端</div></div>
       </div>
-      <div class="form-group"><label class="form-label">API Key</label><input type="text" id="cloud-key" placeholder="JSONBin API Key"></div>
-      <div class="form-group"><label class="form-label">Bin ID</label><input type="text" id="cloud-bin" placeholder="同步后自动填充"></div>
+      <div class="form-group"><label class="form-label">AccessKey ID</label><input type="text" id="cloud-key" placeholder="LTAI5t9AieewsZayUo3CkmrU"></div>
+      <div class="form-group"><label class="form-label">AccessKey Secret</label><input type="password" id="cloud-secret" placeholder="OSS AccessKey Secret"></div>
+      <div class="form-group"><label class="form-label">Bucket 名称</label><input type="text" id="cloud-bin" placeholder="martinleo" value="martinleo"></div>
+      <div class="form-group"><label class="form-label">Region</label><select id="cloud-region">
+        <option value="oss-cn-hangzhou">华东1（杭州）</option>
+        <option value="oss-cn-shanghai" selected>华东2（上海）</option>
+        <option value="oss-cn-beijing">华北2（北京）</option>
+        <option value="oss-cn-shenzhen">华南1（深圳）</option>
+        <option value="oss-cn-hongkong">香港</option>
+      </select></div>
       <div class="cloud-actions">
         <button class="btn btn-small" onclick="doCloudSync()" style="flex:1;">☁️ 同步到云端</button>
         <button class="btn btn-outline btn-small" onclick="doCloudLoad()" style="flex:1;">📥 从云端加载</button>
@@ -234,7 +261,7 @@
 <div class="modal" id="diary-modal">
   <div class="modal-content">
     <div class="modal-header">
-      <div class="modal-title">写日记</div>
+      <div class="modal-title" id="diary-modal-title">写日记</div>
       <button class="modal-close" onclick="closeModals()">×</button>
     </div>
     <div class="form-group"><label class="form-label">标题</label><input type="text" id="d-title" placeholder="今天发生了什么..."></div>
@@ -250,8 +277,27 @@
       <div class="form-group" style="flex:1;"><label class="form-label">心情</label><select id="d-mood"><option>😊开心</option><option>😍甜蜜</option><option>😭感动</option><option>🥺想念</option><option>😌平静</option></select></div>
     </div>
     <div class="modal-actions">
+      <button class="btn btn-outline" id="diary-cancel-btn" onclick="closeModals()" style="display:none;">取消编辑</button>
       <button class="btn btn-outline" onclick="closeModals()">取消</button>
-      <button class="btn" onclick="submitDiary()">发布</button>
+      <button class="btn" id="diary-submit-btn" onclick="submitDiary()">发布</button>
+    </div>
+  </div>
+</div>
+
+<!-- 回复弹窗 -->
+<div class="modal" id="reply-modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <div class="modal-title">回复评论</div>
+      <button class="modal-close" onclick="closeReplyModal()">×</button>
+    </div>
+    <div class="form-group">
+      <label class="form-label">你的回复</label>
+      <textarea id="reply-content" class="reply-input" placeholder="写下你的回复..." style="width:100%;min-height:80px;"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeReplyModal()">取消</button>
+      <button class="btn" onclick="submitReply()">发送回复</button>
     </div>
   </div>
 </div>
@@ -308,20 +354,160 @@
 <div class="toast" id="toast"></div>
 
 <script>
-// ============ 云端配置 ============
+// ============ 云端配置（阿里云OSS）============
 var cloudCfg = {
-  apiKey: '$2a$10$ddYMKOITk/Jwo8TOLiCJmeM3b.NxOKhk0j0ZdboR1sgr5q4nTEtnq',
-  binId: '69f5e3bd856a68218999db49',
+  accessKeyId: '',      // LTAI5t9AieewsZayUo3CkmrU
+  accessKeySecret: '',   // 你的 Secret
+  bucket: 'martinleo',  // Bucket名称
+  region: 'oss-cn-shanghai', // Region
+  objectKey: 'wodexiaowo-data.json', // 数据文件名
+  endpoint: '',
   autoSync: true
 };
 
-// ============ 全局数据 ============
-var appData = {
-  settings: { title: '我们的小窝', name1: '', name2: '', startDate: '' },
-  diaries: [], photos: [], anniversaries: [], wishlist: []
+// 初始化 endpoint
+(function initOSS() {
+  // 将 region 转换为 endpoint
+  var regionMap = {
+    'oss-cn-hangzhou': 'aliyuncs.com',
+    'oss-cn-shanghai': 'aliyuncs.com',
+    'oss-cn-beijing': 'aliyuncs.com',
+    'oss-cn-shenzhen': 'aliyuncs.com',
+    'oss-cn-hongkong': 'aliyuncs.com'
+  };
+  var suffix = regionMap[cloudCfg.region] || 'aliyuncs.com';
+  cloudCfg.endpoint = 'https://' + cloudCfg.bucket + '.' + cloudCfg.region + '.aliyuncs.com';
+})();
+
+// ============ 阿里云 OSS 签名工具 ============
+var OSSUtils = {
+  // 手动实现签名（简化版，适合小数据）
+  sign: function(accessKeySecret, policy) {
+    // Base64 编码的 policy
+    var policyBase64 = this.base64Encode(policy);
+    // HMAC-SHA1 签名
+    var signature = this.hmacSHA1(accessKeySecret, policyBase64);
+    return {
+      policy: policyBase64,
+      signature: signature
+    };
+  },
+  
+  // Base64 编码
+  base64Encode: function(str) {
+    var CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=';
+    var output = [];
+    for (var i = 0; i < str.length; i += 3) {
+      var chr1 = str.charCodeAt(i);
+      var chr2 = str.charCodeAt(i + 1) || 0;
+      var chr3 = str.charCodeAt(i + 2) || 0;
+      var enc1 = chr1 >> 2;
+      var enc2 = ((chr1 & 3) << 4) | (chr2 >> 4);
+      var enc3 = ((chr2 & 15) << 2) | (chr3 >> 6);
+      var enc4 = chr3 & 63;
+      if (isNaN(str.charCodeAt(i + 1))) enc3 = enc4 = 64;
+      else if (isNaN(str.charCodeAt(i + 2))) enc4 = 64;
+      output.push(CHARS.charAt(enc1), CHARS.charAt(enc2), CHARS.charAt(enc3), CHARS.charAt(enc4));
+    }
+    return output.join('');
+  },
+  
+  // HMAC-SHA1
+  hmacSHA1: function(key, message) {
+    function toWordArray(str) {
+      var words = [];
+      for (var i = 0; i < str.length; i++) {
+        words[i >> 2] |= (str.charCodeAt(i) & 0xFF) << (24 - (i % 4) * 8);
+      }
+      return words;
+    }
+    
+    function rotl(n, s) { return (n << s) | (n >>> (32 - s)); }
+    
+    function sha1block(w) {
+      var a = 1732584193, b = -271733879, c = -1732584194, d = 271733878, e = -1009589776;
+      for (var j = 0; j < 80; j++) {
+        var temp, f, k;
+        if (j < 16) temp = w[j];
+        else {
+          temp = rotl(w[j-3] ^ w[j-8] ^ w[j-14] ^ w[j-16], 1);
+          w[j] = temp;
+        }
+        if (j < 20) { f = (b & c) | ((~b) & d); k = 1518500249; }
+        else if (j < 40) { f = b ^ c ^ d; k = 1859775393; }
+        else if (j < 60) { f = (b & c) | (b & d) | (c & d); k = -1894007588; }
+        else { f = b ^ c ^ d; k = -899497514; }
+        temp = (rotl(a, 5) + f + e + k + temp) >>> 0;
+        e = d; d = c; c = rotl(b, 30); b = a; a = temp;
+      }
+      return [a + 1732584193 >>> 0, b - 271733879 >>> 0, c - 1732584194 >>> 0, d + 271733878 >>> 0, e - 1009589776 >>> 0];
+    }
+    
+    var words = toWordArray(key);
+    var ml = words.length * 8;
+    words[words.length] = 0x8000;
+    while ((words.length % 16) !== 14) words.push(0);
+    words.push(ml >>> 16, ml & 0xFFFF);
+    
+    var h = [0x67452301, 0xEFCDAB89, 0x98BADCFE, 0x10325476, 0xC3D2E1F0];
+    for (var i = 0; i < words.length; i += 16) {
+      var block = new Array(80);
+      for (var j = 0; j < 16; j++) block[j] = words[i + j] || 0;
+      h = sha1block(block).map(function(v, i) { return (h[i] + v) >>> 0; });
+    }
+    
+    words = toWordArray(message);
+    ml = words.length * 8;
+    words[words.length] = 0x80;
+    while ((words.length % 16) !== 14) words.push(0);
+    words.push(ml >>> 16, ml & 0xFFFF);
+    
+    var h2 = [0x67452301, 0xEFCDAB89, 0x98BADCFE, 0x10325476, 0xC3D2E1F0];
+    for (var i = 0; i < words.length; i += 16) {
+      var block = new Array(80);
+      for (var j = 0; j < 16; j++) block[j] = words[i + j] || 0;
+      h2 = sha1block(block).map(function(v, i) { return (h2[i] + v) >>> 0; });
+    }
+    
+    return h2.map(function(v) { return ('00000000' + v.toString(16)).slice(-8); }).join('');
+  },
+  
+  // 生成带签名的 URL（用于上传）
+  getSignedUrl: function(method, objectKey) {
+    var expiration = Math.floor(Date.now() / 1000) + 3600; // 1小时后过期
+    var policy = JSON.stringify({
+      expiration: new Date(expiration * 1000).toISOString(),
+      conditions: [
+        ['content-length-range', 0, 10485760], // 最大10MB
+        { bucket: cloudCfg.bucket },
+        { key: objectKey }
+      ]
+    });
+    
+    var signature = this.hmacSHA1(cloudCfg.accessKeySecret, this.base64Encode(policy));
+    
+    var url = cloudCfg.endpoint + '/' + objectKey;
+    url += '?OSSAccessKeyId=' + encodeURIComponent(cloudCfg.accessKeyId);
+    url += '&Expires=' + expiration;
+    url += '&Signature=' + encodeURIComponent(signature);
+    
+    return url;
+  },
+  
+  // 生成 GET 签名 URL（用于私有bucket读取）
+  getGetSignedUrl: function(objectKey) {
+    return this.getSignedUrl('GET', objectKey);
+  }
 };
 
-var diaryPhotos = []; // 临时日记照片
+// ============ 网络状态管理 ============
+var networkState = {
+  isOnline: navigator.onLine,
+  pendingSync: false,
+  syncInProgress: false,
+  retryCount: 0,
+  maxRetries: 3
+};
 
 // ============ 初始化 ============
 (function init() {
@@ -335,8 +521,11 @@ var diaryPhotos = []; // 临时日记照片
   if (savedCloud) {
     try { 
       var tmp = JSON.parse(savedCloud);
-      if (tmp.apiKey) cloudCfg.apiKey = tmp.apiKey;
-      if (tmp.binId) cloudCfg.binId = tmp.binId;
+      if (tmp.accessKeyId) cloudCfg.accessKeyId = tmp.accessKeyId;
+      if (tmp.accessKeySecret) cloudCfg.accessKeySecret = tmp.accessKeySecret;
+      if (tmp.bucket) cloudCfg.bucket = tmp.bucket;
+      if (tmp.region) cloudCfg.region = tmp.region;
+      if (tmp.objectKey) cloudCfg.objectKey = tmp.objectKey || 'wodexiaowo-data.json';
       if (typeof tmp.autoSync === 'boolean') cloudCfg.autoSync = tmp.autoSync;
     } catch(e) {}
   }
@@ -346,8 +535,14 @@ var diaryPhotos = []; // 临时日记照片
   $('set-name1').value = appData.settings.name1 || '';
   $('set-name2').value = appData.settings.name2 || '';
   $('set-start-date').value = appData.settings.startDate || '';
-  $('cloud-key').value = cloudCfg.apiKey;
-  $('cloud-bin').value = cloudCfg.binId;
+  
+  // 填充云端配置
+  $('cloud-key').value = cloudCfg.accessKeyId || '';
+  $('cloud-secret').value = cloudCfg.accessKeySecret || '';
+  $('cloud-bin').value = cloudCfg.bucket || 'martinleo';
+  if (cloudCfg.region && $('cloud-region')) {
+    $('cloud-region').value = cloudCfg.region;
+  }
   
   // 自动同步开关
   updateAutoSyncUI();
@@ -359,98 +554,206 @@ var diaryPhotos = []; // 临时日记照片
   // 渲染
   renderAll();
   
-  // 自动从云端加载最新数据（如果存在）
-  autoLoadFromCloud();
+  // 设置网络监听
+  setupNetworkListeners();
+  
+  // 自动从云端加载
+  autoLoadFromOSS();
 })();
 
-// 自动从云端加载
-function autoLoadFromCloud() {
-  if (!cloudCfg.apiKey || !cloudCfg.binId) {
-    updateSyncStatus('idle');
+// ============ 网络状态监听 ============
+function setupNetworkListeners() {
+  window.addEventListener('online', function() {
+    console.log('🌐 网络已恢复');
+    networkState.isOnline = true;
+    updateSyncStatus('syncing', '恢复连接...');
+    
+    setTimeout(function() {
+      if (networkState.pendingSync) {
+        console.log('📤 同步待处理的更改...');
+        cloudSyncSilent();
+      } else {
+        autoLoadFromOSS();
+      }
+    }, 1500);
+  });
+  
+  window.addEventListener('offline', function() {
+    console.log('📴 网络已断开');
+    networkState.isOnline = false;
+    updateSyncStatus('offline', '离线');
+  });
+}
+
+// ============ 智能请求（带超时重试）============
+function smartRequest(options) {
+  return new Promise(function(resolve, reject) {
+    var xhr = new XMLHttpRequest();
+    var timeout = options.timeout || 25000;
+    var retries = 0;
+    var maxRetries = options.retries || 3;
+    
+    function attempt() {
+      xhr.abort();
+      xhr = new XMLHttpRequest();
+      
+      xhr.open(options.method || 'GET', options.url, true);
+      
+      if (options.headers) {
+        Object.keys(options.headers).forEach(function(key) {
+          xhr.setRequestHeader(key, options.headers[key]);
+        });
+      }
+      
+      xhr.timeout = timeout;
+      
+      xhr.onload = function() {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          try {
+            if (xhr.responseText) {
+              resolve(JSON.parse(xhr.responseText));
+            } else {
+              resolve(null);
+            }
+          } catch(e) {
+            resolve(xhr.responseText);
+          }
+        } else if (xhr.status === 404) {
+          resolve(null);
+        } else {
+          reject({ type: 'http', status: xhr.status, message: '错误 ' + xhr.status });
+        }
+      };
+      
+      xhr.ontimeout = function() {
+        retries++;
+        console.log('⏱️ 超时 (尝试 ' + retries + '/' + maxRetries + ')');
+        if (retries < maxRetries) {
+          setTimeout(attempt, Math.pow(2, retries) * 1000);
+        } else {
+          reject({ type: 'timeout', message: '请求超时' });
+        }
+      };
+      
+      xhr.onerror = function() {
+        retries++;
+        console.log('❌ 网络错误 (尝试 ' + retries + '/' + maxRetries + ')');
+        if (retries < maxRetries) {
+          setTimeout(attempt, Math.pow(2, retries) * 1000);
+        } else {
+          reject({ type: 'network', message: '网络连接失败' });
+        }
+      };
+      
+      xhr.send(options.body || null);
+    }
+    
+    attempt();
+  });
+}
+
+// ============ 从OSS加载数据 ============
+function autoLoadFromOSS() {
+  if (!cloudCfg.accessKeyId || !cloudCfg.bucket) {
+    updateSyncStatus('idle', '未配置');
     return;
   }
   
-  updateSyncStatus('syncing', '同步中...');
+  if (!navigator.onLine) {
+    updateSyncStatus('offline', '离线');
+    return;
+  }
   
-  var xhr = new XMLHttpRequest();
-  xhr.open('GET', 'https://api.jsonbin.io/v3/b/' + cloudCfg.binId + '/latest', true);
-  xhr.setRequestHeader('X-Master-Key', cloudCfg.apiKey);
-  xhr.timeout = 10000; // 10秒超时
+  updateSyncStatus('syncing', '检查中...');
   
-  xhr.onload = function() {
-    if (xhr.status === 200) {
-      try {
-        var res = JSON.parse(xhr.responseText);
-        if (res.record) {
-          // 云端有数据，加载到本地
-          appData = res.record;
-          saveLocal();
-          
-          // 更新表单
-          $('set-title').value = appData.settings.title || '我们的小窝';
-          $('set-name1').value = appData.settings.name1 || '';
-          $('set-name2').value = appData.settings.name2 || '';
-          $('set-start-date').value = appData.settings.startDate || '';
-          
-          renderAll();
-          updateSyncStatus('synced', '已同步');
-          showToast('已同步云端数据');
-        } else {
-          // 云端为空，上传本地数据
-          cloudSyncSilent();
-        }
-      } catch(e) {
-        // 解析失败，使用本地数据
-        updateSyncStatus('idle');
+  var url = cloudCfg.endpoint + '/' + cloudCfg.objectKey;
+  
+  smartRequest({
+    method: 'GET',
+    url: url,
+    timeout: 20000,
+    retries: 3
+  }).then(function(res) {
+    if (res) {
+      var cloudTime = res._syncTime || 0;
+      var localTime = appData._syncTime || 0;
+      
+      if (cloudTime > localTime) {
+        appData = res;
+        saveLocal();
+        
+        $('set-title').value = appData.settings.title || '我们的小窝';
+        $('set-name1').value = appData.settings.name1 || '';
+        $('set-name2').value = appData.settings.name2 || '';
+        $('set-start-date').value = appData.settings.startDate || '';
+        
+        renderAll();
+        updateSyncStatus('synced', '已同步');
+        showToast('已同步云端数据 ✓');
+      } else {
+        updateSyncStatus('syncing', '上传中...');
+        cloudSyncSilent();
       }
-    } else if (xhr.status === 404) {
-      // Bin不存在，上传本地数据
-      cloudSyncSilent();
     } else {
-      updateSyncStatus('idle');
+      cloudSyncSilent();
     }
-  };
-  
-  xhr.ontimeout = function() {
-    updateSyncStatus('idle');
-  };
-  
-  xhr.onerror = function() {
-    updateSyncStatus('idle');
-  };
-  
-  xhr.send();
+  }).catch(function(err) {
+    console.log('加载失败:', err.message);
+    updateSyncStatus('idle', '本地');
+  });
 }
 
-// 静默同步到云端
+// ============ 同步到OSS ============
 function cloudSyncSilent() {
-  if (!cloudCfg.apiKey || !cloudCfg.binId) return;
+  if (!cloudCfg.accessKeyId || !cloudCfg.bucket) return;
   
-  var xhr = new XMLHttpRequest();
-  xhr.open('PUT', 'https://api.jsonbin.io/v3/b/' + cloudCfg.binId, true);
-  xhr.setRequestHeader('Content-Type', 'application/json');
-  xhr.setRequestHeader('X-Master-Key', cloudCfg.apiKey);
-  xhr.timeout = 10000;
+  if (!navigator.onLine) {
+    networkState.pendingSync = true;
+    saveLocal();
+    updateSyncStatus('pending', '待同步');
+    return;
+  }
+  
+  if (networkState.syncInProgress) {
+    console.log('同步进行中，跳过...');
+    return;
+  }
+  
+  networkState.syncInProgress = true;
+  networkState.pendingSync = false;
+  
+  updateSyncStatus('syncing', '同步中...');
   
   appData._syncTime = Date.now();
+  var jsonData = JSON.stringify(appData);
   
-  xhr.onload = function() {
-    if (xhr.status === 200) {
-      updateSyncStatus('synced', '已同步');
+  var url = OSSUtils.getSignedUrl('PUT', cloudCfg.objectKey);
+  
+  smartRequest({
+    method: 'PUT',
+    url: url,
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: jsonData,
+    timeout: 25000,
+    retries: 3
+  }).then(function(res) {
+    networkState.syncInProgress = false;
+    networkState.retryCount = 0;
+    updateSyncStatus('synced', '已同步');
+    console.log('✅ 同步成功');
+  }).catch(function(err) {
+    networkState.syncInProgress = false;
+    console.log('❌ 同步失败:', err.message);
+    
+    if (err.type === 'timeout' || err.type === 'network') {
+      networkState.pendingSync = true;
+      updateSyncStatus('pending', '待同步');
     } else {
-      updateSyncStatus('idle');
+      updateSyncStatus('error', '同步失败');
     }
-  };
-  
-  xhr.ontimeout = function() {
-    updateSyncStatus('idle');
-  };
-  
-  xhr.onerror = function() {
-    updateSyncStatus('idle');
-  };
-  
-  xhr.send(JSON.stringify(appData));
+  });
 }
 
 function $(id) { return document.getElementById(id); }
@@ -472,8 +775,14 @@ function saveAndSync() {
   if (!saveLocal()) return false;
   
   // 自动同步（静默）
-  if (cloudCfg.autoSync && cloudCfg.apiKey && cloudCfg.binId) {
-    cloudSyncSilent();
+  if (cloudCfg.autoSync && cloudCfg.accessKeyId && cloudCfg.bucket) {
+    if (navigator.onLine) {
+      cloudSyncSilent();
+    } else {
+      // 离线，标记待同步
+      networkState.pendingSync = true;
+      updateSyncStatus('pending', '待同步');
+    }
   }
   return true;
 }
@@ -501,10 +810,18 @@ function updateSyncStatus(status, msg) {
     el.style.background = '#ffebee';
     el.style.color = '#f44336';
     el.textContent = msg || '同步失败';
+  } else if (status === 'offline') {
+    el.style.background = '#eceff1';
+    el.style.color = '#78909c';
+    el.textContent = msg || '离线';
+  } else if (status === 'pending') {
+    el.style.background = '#fff8e1';
+    el.style.color = '#ffa000';
+    el.textContent = msg || '待同步';
   } else {
     el.style.background = '#f5f5f5';
     el.style.color = '#999';
-    el.textContent = '本地';
+    el.textContent = msg || '本地';
   }
 }
 
@@ -536,7 +853,9 @@ function switchPage(name) {
 }
 
 // ============ 弹窗 ============
-function openDiaryModal() {
+function openDiaryModal(diaryId) {
+  // 重置状态
+  editingDiaryId = null;
   $('d-title').value = '';
   $('d-content').value = '';
   $('d-mood').selectedIndex = 0;
@@ -544,6 +863,39 @@ function openDiaryModal() {
   $('d-date').value = now.toISOString().slice(0, 10);
   diaryPhotos = [];
   $('diary-photo-preview').innerHTML = '';
+  
+  // 如果是编辑模式
+  if (diaryId) {
+    var diary = null;
+    for (var i = 0; i < appData.diaries.length; i++) {
+      if (appData.diaries[i].id === diaryId) {
+        diary = appData.diaries[i];
+        break;
+      }
+    }
+    if (diary) {
+      editingDiaryId = diaryId;
+      $('diary-modal-title').textContent = '编辑日记';
+      $('d-title').value = diary.title;
+      $('d-content').value = diary.content;
+      $('d-date').value = diary.date;
+      // 设置心情
+      var moods = ['😊开心', '😍甜蜜', '😭感动', '🥺想念', '😌平静'];
+      var moodIdx = moods.indexOf(diary.mood);
+      $('d-mood').selectedIndex = moodIdx >= 0 ? moodIdx : 0;
+      // 加载照片
+      diaryPhotos = diary.photos ? diary.photos.slice() : [];
+      renderDiaryPhotoPreview();
+      $('diary-submit-btn').textContent = '保存修改';
+      $('diary-cancel-btn').style.display = 'inline-block';
+    }
+  } else {
+    // 新建模式
+    $('diary-modal-title').textContent = '写日记';
+    $('diary-submit-btn').textContent = '发布';
+    $('diary-cancel-btn').style.display = 'none';
+  }
+  
   $('diary-modal').classList.add('show');
 }
 
@@ -566,6 +918,15 @@ function closeModals() {
   $('wish-modal').classList.remove('show');
   $('diary-detail-modal').classList.remove('show');
   $('img-view-modal').classList.remove('show');
+  $('reply-modal').classList.remove('show');
+  editingDiaryId = null;
+  replyingToComment = null;
+}
+
+function closeReplyModal() {
+  $('reply-modal').classList.remove('show');
+  $('reply-content').value = '';
+  replyingToComment = null;
 }
 
 // ============ 首页 ============
@@ -643,22 +1004,47 @@ function submitDiary() {
     return;
   }
   
-  appData.diaries.push({
-    id: Date.now().toString(),
-    title: title,
-    content: content,
-    date: date,
-    mood: mood,
-    photos: diaryPhotos.slice()
-  });
-  
-  diaryPhotos = [];
-  
-  if (saveAndSync() !== false) {
-    closeModals();
-    renderDiaryList();
-    renderHome();
-    showToast('日记已发布 ✓');
+  // 如果是编辑模式
+  if (editingDiaryId) {
+    for (var i = 0; i < appData.diaries.length; i++) {
+      if (appData.diaries[i].id === editingDiaryId) {
+        appData.diaries[i].title = title;
+        appData.diaries[i].content = content;
+        appData.diaries[i].date = date;
+        appData.diaries[i].mood = mood;
+        appData.diaries[i].photos = diaryPhotos.slice();
+        break;
+      }
+    }
+    editingDiaryId = null;
+    diaryPhotos = [];
+    
+    if (saveAndSync() !== false) {
+      closeModals();
+      renderDiaryList();
+      renderHome();
+      showToast('日记已修改 ✓');
+    }
+  } else {
+    // 新建模式
+    appData.diaries.push({
+      id: Date.now().toString(),
+      title: title,
+      content: content,
+      date: date,
+      mood: mood,
+      photos: diaryPhotos.slice(),
+      comments: [] // 初始化评论数组
+    });
+    
+    diaryPhotos = [];
+    
+    if (saveAndSync() !== false) {
+      closeModals();
+      renderDiaryList();
+      renderHome();
+      showToast('日记已发布 ✓');
+    }
   }
 }
 
@@ -687,8 +1073,9 @@ function renderDiaryList() {
 function showDiary(id) {
   id = decodeURIComponent(id);
   var d = null;
+  var diaryIdx = -1;
   for (var i = 0; i < appData.diaries.length; i++) {
-    if (appData.diaries[i].id === id) { d = appData.diaries[i]; break; }
+    if (appData.diaries[i].id === id) { d = appData.diaries[i]; diaryIdx = i; break; }
   }
   if (!d) return;
   
@@ -699,6 +1086,40 @@ function showDiary(id) {
     }).join('') + '</div>';
   }
   
+  // 渲染评论
+  var commentsHtml = '';
+  if (d.comments && d.comments.length > 0) {
+    var commentsList = d.comments.map(function(c) {
+      var repliesHtml = '';
+      if (c.replies && c.replies.length > 0) {
+        repliesHtml = '<div class="comment-reply">' + c.replies.map(function(r) {
+          return '<div class="comment-item" style="margin-bottom:8px;background:#fff;">' +
+            '<div class="comment-header">' +
+            '<span class="comment-author">' + escapeHtml(r.author) + '</span>' +
+            '<span class="comment-time">' + r.time + '</span></div>' +
+            '<div class="comment-content">' + escapeHtml(r.content) + '</div></div>';
+        }).join('') + '</div>';
+      }
+      return '<div class="comment-item">' +
+        '<div class="comment-header">' +
+        '<span class="comment-author">' + escapeHtml(c.author) + '</span>' +
+        '<span class="comment-time">' + c.time + '</span></div>' +
+        '<div class="comment-content">' + escapeHtml(c.content) + '</div>' +
+        '<div class="comment-actions">' +
+        '<button class="comment-action-btn" onclick="openReplyForm(\'' + diaryIdx + '\',\'' + appData.diaries[diaryIdx].comments.indexOf(c) + '\')">回复</button>' +
+        '<button class="comment-action-btn" onclick="deleteComment(\'' + diaryIdx + '\',\'' + appData.diaries[diaryIdx].comments.indexOf(c) + '\')">删除</button></div>' +
+        repliesHtml + '</div>';
+    }).join('');
+    
+    commentsHtml = '<div class="comments-section">' +
+      '<div class="comments-title">评论 <span class="comments-count">' + d.comments.length + '</span></div>' +
+      commentsList + '</div>';
+  } else {
+    commentsHtml = '<div class="comments-section">' +
+      '<div class="comments-title">评论 <span class="comments-count">0</span></div>' +
+      '<div style="color:#ccc;font-size:13px;text-align:center;padding:10px;">还没有评论，快来写第一条吧~</div></div>';
+  }
+  
   $('diary-detail-content').innerHTML =
     '<div class="modal-header">' +
     '<div class="modal-title">日记详情</div>' +
@@ -706,10 +1127,24 @@ function showDiary(id) {
     '</div>' +
     photosHtml +
     '<div class="diary-date">' + d.date + ' · ' + d.mood + '</div>' +
-    '<div class="diary-title">' + d.title + '</div>' +
-    '<div class="diary-body">' + d.content + '</div>' +
-    '<div style="margin-top:20px;"><button class="btn btn-outline" style="color:#e91e63;" onclick="deleteDiary(\'' + encodeURIComponent(d.id) + '\')">删除</button></div>';
+    '<div class="diary-title">' + escapeHtml(d.title) + '</div>' +
+    '<div class="diary-body">' + escapeHtml(d.content) + '</div>' +
+    '<div class="diary-actions-bar">' +
+    '<button class="btn btn-outline" onclick="openDiaryModal(\'' + encodeURIComponent(d.id) + '\')" style="flex:1;">✏️ 编辑</button>' +
+    '<button class="btn btn-outline" onclick="openCommentForm(\'' + diaryIdx + '\')" style="flex:1;">💬 评论</button>' +
+    '<button class="btn btn-outline" onclick="deleteDiary(\'' + encodeURIComponent(d.id) + '\')" style="flex:1;color:#f44336;">🗑️ 删除</button>' +
+    '</div>' +
+    '<div id="comment-form-container"></div>' +
+    commentsHtml;
   $('diary-detail-modal').classList.add('show');
+}
+
+// HTML转义
+function escapeHtml(text) {
+  if (!text) return '';
+  var div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
 }
 
 function deleteDiary(id) {
@@ -721,6 +1156,91 @@ function deleteDiary(id) {
   renderDiaryList();
   renderHome();
   showToast('已删除');
+}
+
+// ============ 评论功能 ============
+function openCommentForm(diaryIdx) {
+  var container = $('comment-form-container');
+  container.innerHTML = '<div class="reply-form" style="margin-top:16px;">' +
+    '<textarea id="new-comment-content" class="reply-input" placeholder="写下你的评论..." style="min-height:80px;"></textarea>' +
+    '<div class="reply-submit">' +
+    '<button class="btn btn-small" onclick="submitComment(' + diaryIdx + ')">发表评论</button>' +
+    '</div></div>';
+  $('new-comment-content').focus();
+}
+
+function openReplyForm(diaryIdx, commentIdx) {
+  replyingToComment = { diaryIdx: diaryIdx, commentIdx: parseInt(commentIdx) };
+  $('reply-content').value = '';
+  $('reply-modal').classList.add('show');
+  $('reply-content').focus();
+}
+
+function submitComment(diaryIdx) {
+  var content = $('new-comment-content').value.trim();
+  if (!content) {
+    showToast('请输入评论内容');
+    return;
+  }
+  
+  // 确保评论数组存在
+  if (!appData.diaries[diaryIdx].comments) {
+    appData.diaries[diaryIdx].comments = [];
+  }
+  
+  var now = new Date();
+  appData.diaries[diaryIdx].comments.push({
+    author: appData.settings.name2 || '我',
+    content: content,
+    time: now.toLocaleDateString() + ' ' + now.toLocaleTimeString().slice(0, 5),
+    replies: []
+  });
+  
+  if (saveAndSync() !== false) {
+    // 重新显示日记详情以刷新评论
+    showDiary(encodeURIComponent(appData.diaries[diaryIdx].id));
+    showToast('评论已发表 ✓');
+  }
+}
+
+function submitReply() {
+  var content = $('reply-content').value.trim();
+  if (!content) {
+    showToast('请输入回复内容');
+    return;
+  }
+  
+  if (!replyingToComment) return;
+  
+  var diary = appData.diaries[replyingToComment.diaryIdx];
+  if (!diary.comments || !diary.comments[replyingToComment.commentIdx]) return;
+  
+  var now = new Date();
+  diary.comments[replyingToComment.commentIdx].replies = diary.comments[replyingToComment.commentIdx].replies || [];
+  diary.comments[replyingToComment.commentIdx].replies.push({
+    author: appData.settings.name2 || '我',
+    content: content,
+    time: now.toLocaleDateString() + ' ' + now.toLocaleTimeString().slice(0, 5)
+  });
+  
+  if (saveAndSync() !== false) {
+    closeReplyModal();
+    // 重新显示日记详情以刷新评论
+    showDiary(encodeURIComponent(diary.id));
+    showToast('回复已发送 ✓');
+  }
+}
+
+function deleteComment(diaryIdx, commentIdx) {
+  if (!confirm('确定删除这条评论?')) return;
+  
+  var diary = appData.diaries[diaryIdx];
+  diary.comments.splice(parseInt(commentIdx), 1);
+  
+  if (saveAndSync() !== false) {
+    showDiary(encodeURIComponent(diary.id));
+    showToast('评论已删除');
+  }
 }
 
 // 日记照片
@@ -978,8 +1498,14 @@ function doSaveSettings() {
   appData.settings.name2 = $('set-name2').value;
   appData.settings.startDate = $('set-start-date').value;
   
-  cloudCfg.apiKey = $('cloud-key').value;
-  cloudCfg.binId = $('cloud-bin').value;
+  // 保存阿里云OSS配置
+  cloudCfg.accessKeyId = $('cloud-key').value.trim();
+  cloudCfg.accessKeySecret = $('cloud-secret').value.trim();
+  cloudCfg.bucket = $('cloud-bin').value.trim();
+  cloudCfg.region = $('cloud-region').value;
+  
+  // 更新 endpoint
+  cloudCfg.endpoint = 'https://' + cloudCfg.bucket + '.' + cloudCfg.region + '.aliyuncs.com';
   
   if (saveLocal()) {
     renderHome();
@@ -987,8 +1513,8 @@ function doSaveSettings() {
     setTimeout(function() { $('save-msg').innerHTML = ''; }, 2000);
     
     // 如果开启自动同步，则同步
-    if (cloudCfg.autoSync && cloudCfg.apiKey && cloudCfg.binId) {
-      cloudSync(true);
+    if (cloudCfg.autoSync && cloudCfg.accessKeyId && cloudCfg.bucket) {
+      cloudSyncSilent();
     }
   }
 }
@@ -1008,150 +1534,116 @@ function updateAutoSyncUI() {
   }
 }
 
-// ============ 云同步 ============
-function cloudSync(silent) {
-  if (!cloudCfg.apiKey || !cloudCfg.binId) {
-    if (!silent) {
-      $('cloud-msg').innerHTML = '<div class="msg msg-error">请先填写API Key和Bin ID</div>';
-    }
+// ============ 云同步（手动版，阿里云OSS）============
+function cloudSync() {
+  if (!cloudCfg.accessKeyId || !cloudCfg.bucket) {
+    $('cloud-msg').innerHTML = '<div class="msg msg-error">请先填写AccessKey配置</div>';
     return;
   }
   
-  if (!silent) {
-    $('cloud-msg').innerHTML = '<div class="msg msg-loading">同步中...</div>';
+  if (!navigator.onLine) {
+    $('cloud-msg').innerHTML = '<div class="msg msg-error">当前离线，已保存到本地</div>';
+    updateSyncStatus('offline', '离线');
+    return;
   }
+  
+  $('cloud-msg').innerHTML = '<div class="msg msg-loading">同步中...</div>';
   updateSyncStatus('syncing', '同步中...');
   
-  var xhr = new XMLHttpRequest();
-  xhr.open('PUT', 'https://api.jsonbin.io/v3/b/' + cloudCfg.binId, true);
-  xhr.setRequestHeader('Content-Type', 'application/json');
-  xhr.setRequestHeader('X-Master-Key', cloudCfg.apiKey);
-  xhr.timeout = 15000;
-  
   appData._syncTime = Date.now();
+  var jsonData = JSON.stringify(appData);
   
-  xhr.onload = function() {
-    if (xhr.status === 200) {
-      try {
-        var res = JSON.parse(xhr.responseText);
-        if (res.metadata && res.metadata.id && res.metadata.id !== cloudCfg.binId) {
-          cloudCfg.binId = res.metadata.id;
-          $('cloud-bin').value = cloudCfg.binId;
-          saveLocal();
-        }
-      } catch(e) {}
-      
-      if (!silent) {
-        $('cloud-msg').innerHTML = '<div class="msg msg-success">✓ 同步成功 ' + new Date().toLocaleTimeString() + '</div>';
-      }
-      updateSyncStatus('synced', '已同步');
-      if (!silent) showToast('同步成功');
-    } else {
-      var errMsg = xhr.status === 403 ? '权限不足' : xhr.status === 404 ? 'Bin不存在' : '错误 ' + xhr.status;
-      if (!silent) {
-        $('cloud-msg').innerHTML = '<div class="msg msg-error">✗ 同步失败: ' + errMsg + '</div>';
-      }
-      updateSyncStatus('error', '同步失败');
-      if (!silent) showToast('同步失败: ' + errMsg);
-    }
-  };
+  var url = OSSUtils.getSignedUrl('PUT', cloudCfg.objectKey);
   
-  xhr.ontimeout = function() {
-    if (!silent) {
-      $('cloud-msg').innerHTML = '<div class="msg msg-error">✗ 请求超时</div>';
-    }
-    updateSyncStatus('error', '超时');
-    if (!silent) showToast('同步超时，请重试');
-  };
-  
-  xhr.onerror = function() {
-    if (!silent) {
-      $('cloud-msg').innerHTML = '<div class="msg msg-error">✗ 网络错误</div>';
-    }
-    updateSyncStatus('error', '网络错误');
-    if (!silent) showToast('网络错误');
-  };
-  
-  xhr.send(JSON.stringify(appData));
+  smartRequest({
+    method: 'PUT',
+    url: url,
+    headers: { 'Content-Type': 'application/json' },
+    body: jsonData,
+    timeout: 25000,
+    retries: 3
+  }).then(function(res) {
+    $('cloud-msg').innerHTML = '<div class="msg msg-success">✓ 同步成功 ' + new Date().toLocaleTimeString() + '</div>';
+    updateSyncStatus('synced', '已同步');
+    showToast('同步成功 ✓');
+  }).catch(function(err) {
+    console.log('同步失败:', err.message);
+    $('cloud-msg').innerHTML = '<div class="msg msg-error">✗ ' + err.message + '</div>';
+    updateSyncStatus('error', '同步失败');
+    showToast('同步失败: ' + err.message);
+  });
 }
 
 function doCloudSync() {
-  cloudCfg.apiKey = $('cloud-key').value.trim();
-  cloudCfg.binId = $('cloud-bin').value.trim();
+  cloudCfg.accessKeyId = $('cloud-key').value.trim();
+  cloudCfg.accessKeySecret = $('cloud-secret').value.trim();
+  cloudCfg.bucket = $('cloud-bin').value.trim();
+  cloudCfg.region = $('cloud-region').value;
+  cloudCfg.endpoint = 'https://' + cloudCfg.bucket + '.' + cloudCfg.region + '.aliyuncs.com';
+  
   saveLocal();
-  cloudSync(false);
+  cloudSync();
 }
 
 function doCloudLoad() {
-  var k = $('cloud-key').value.trim();
-  var b = $('cloud-bin').value.trim();
+  var ak = $('cloud-key').value.trim();
+  var sk = $('cloud-secret').value.trim();
+  var bucket = $('cloud-bin').value.trim();
+  var region = $('cloud-region').value;
   
-  if (!k || !b) {
-    $('cloud-msg').innerHTML = '<div class="msg msg-error">请先填写API Key和Bin ID</div>';
+  if (!ak || !bucket) {
+    $('cloud-msg').innerHTML = '<div class="msg msg-error">请先填写AccessKey和Bucket配置</div>';
     return;
   }
   
-  cloudCfg.apiKey = k;
-  cloudCfg.binId = b;
+  if (!navigator.onLine) {
+    $('cloud-msg').innerHTML = '<div class="msg msg-error">当前离线，无法加载云端数据</div>';
+    updateSyncStatus('offline', '离线');
+    return;
+  }
+  
+  // 更新配置
+  cloudCfg.accessKeyId = ak;
+  cloudCfg.accessKeySecret = sk;
+  cloudCfg.bucket = bucket;
+  cloudCfg.region = region;
+  cloudCfg.endpoint = 'https://' + bucket + '.' + region + '.aliyuncs.com';
+  
   saveLocal();
   
   $('cloud-msg').innerHTML = '<div class="msg msg-loading">加载中...</div>';
   updateSyncStatus('syncing', '加载中...');
   
-  var xhr = new XMLHttpRequest();
-  xhr.open('GET', 'https://api.jsonbin.io/v3/b/' + b + '/latest', true);
-  xhr.setRequestHeader('X-Master-Key', k);
-  xhr.timeout = 15000;
+  var url = cloudCfg.endpoint + '/' + cloudCfg.objectKey;
   
-  xhr.onload = function() {
-    if (xhr.status === 200) {
-      try {
-        var res = JSON.parse(xhr.responseText);
-        if (res.record) {
-          appData = res.record;
-          saveLocal();
-          
-          // 更新表单
-          $('set-title').value = appData.settings.title || '我们的小窝';
-          $('set-name1').value = appData.settings.name1 || '';
-          $('set-name2').value = appData.settings.name2 || '';
-          $('set-start-date').value = appData.settings.startDate || '';
-          
-          renderAll();
-          $('cloud-msg').innerHTML = '<div class="msg msg-success">✓ 加载成功</div>';
-          updateSyncStatus('synced', '已同步');
-          showToast('加载成功');
-        } else {
-          $('cloud-msg').innerHTML = '<div class="msg msg-error">云端数据为空</div>';
-          updateSyncStatus('idle');
-        }
-      } catch(e) {
-        $('cloud-msg').innerHTML = '<div class="msg msg-error">数据解析失败</div>';
-        updateSyncStatus('error', '解析失败');
-      }
-    } else if (xhr.status === 404) {
-      $('cloud-msg').innerHTML = '<div class="msg msg-error">✗ Bin不存在，请检查Bin ID</div>';
-      updateSyncStatus('error', '不存在');
-    } else if (xhr.status === 403) {
-      $('cloud-msg').innerHTML = '<div class="msg msg-error">✗ API Key权限不足</div>';
-      updateSyncStatus('error', '无权限');
+  smartRequest({
+    method: 'GET',
+    url: url,
+    timeout: 20000,
+    retries: 3
+  }).then(function(res) {
+    if (res) {
+      appData = res;
+      saveLocal();
+      
+      $('set-title').value = appData.settings.title || '我们的小窝';
+      $('set-name1').value = appData.settings.name1 || '';
+      $('set-name2').value = appData.settings.name2 || '';
+      $('set-start-date').value = appData.settings.startDate || '';
+      
+      renderAll();
+      $('cloud-msg').innerHTML = '<div class="msg msg-success">✓ 加载成功</div>';
+      updateSyncStatus('synced', '已同步');
+      showToast('加载成功 ✓');
     } else {
-      $('cloud-msg').innerHTML = '<div class="msg msg-error">✗ 加载失败: ' + xhr.status + '</div>';
-      updateSyncStatus('error', '失败');
+      $('cloud-msg').innerHTML = '<div class="msg msg-error">云端数据为空</div>';
+      updateSyncStatus('idle', '本地');
     }
-  };
-  
-  xhr.ontimeout = function() {
-    $('cloud-msg').innerHTML = '<div class="msg msg-error">✗ 请求超时</div>';
-    updateSyncStatus('error', '超时');
-  };
-  
-  xhr.onerror = function() {
-    $('cloud-msg').innerHTML = '<div class="msg msg-error">✗ 网络错误，请检查网络连接</div>';
-    updateSyncStatus('error', '网络错误');
-  };
-  
-  xhr.send();
+  }).catch(function(err) {
+    console.log('加载失败:', err.message);
+    $('cloud-msg').innerHTML = '<div class="msg msg-error">✗ ' + err.message + '</div>';
+    updateSyncStatus('error', '加载失败');
+  });
 }
 
 // ============ 数据导入导出 ============
